@@ -1,0 +1,64 @@
+# Système de Gestion d'Archives Universel (SGAU)
+# Dépendances Python - Version simplifiée pour Windows
+
+# Framework web et API
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# Base de données (SQLite pour commencer)
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# Authentification et sécurité
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+werkzeug==3.0.1
+
+# Interface utilisateur
+PyQt5==5.15.10
+PyQt5-Qt5==5.15.2
+PyQt5-sip==12.13.0
+
+# Utilitaires
+python-dotenv==1.0.0
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Logging et monitoring
+loguru==0.7.2
+
+# Tests
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Export et import
+openpyxl==3.1.2
+pandas==2.1.4
+xlsxwriter==3.1.9
+
+# Gestion des fichiers
+Pillow==10.1.0
+
+# Validation et sérialisation
+marshmallow==3.20.1
+marshmallow-sqlalchemy==0.29.0
+
+# Utilitaires système
+click==8.1.7
+rich==13.7.0
+tqdm==4.66.1
+
+# Sécurité supplémentaire
+cryptography==41.0.8
+bcrypt==4.1.2
+
+# Gestion des dates
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Configuration
+pyyaml==6.0.1
+toml==0.10.2 
