@@ -6,9 +6,10 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 pydantic==2.5.0
 
-# Base de données (SQLite pour commencer)
-sqlalchemy==2.0.23
-alembic==1.13.1
+# Base de données (Neo4j)
+neo4j==5.15.0
+# sqlalchemy==2.0.23 (Legacy SQLite)
+# alembic==1.13.1 (Legacy SQLite)
 
 # Authentification et sécurité
 python-jose[cryptography]==3.3.0
@@ -61,4 +62,4 @@ pytz==2023.3
 
 # Configuration
 pyyaml==6.0.1
-toml==0.10.2 
+toml==0.10.2

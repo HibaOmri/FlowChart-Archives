@@ -18,7 +18,7 @@ def main():
             sys.exit(app.exec_())
         else:
             QMessageBox.critical(None, "❌ Erreur de connexion", 
-                "Nom d'utilisateur ou matricule incorrect.\n\nComptes de test :\n• marie.martin / EMP001 (RH)\n• jean.dupont / EMP002 (Archiviste)\n• ahmed.hassan / EMP003 (Archiviste)")
+                "Nom d'utilisateur ou matricule incorrect.\n\nComptes par défaut :\n• admin / EMP001 (RH)\n• ahmed.hassan / EMP002 (Archiviste)")
             sys.exit(1)
     else:
         sys.exit(0)

@@ -1,0 +1,9 @@
+
+Document de test pour le dossier Omar Bennani
+ID Dossier: 23
+Date de création: 03/01/2026 22:40:45
+Type: Document texte
+Description: Analyse Technique
+
+Ce fichier a été généré automatiquement pour les tests du système d'archives OCP Khouribga.
+                

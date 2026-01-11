@@ -36,9 +36,9 @@ class FileDropWidget(QFrame):
         layout = QVBoxLayout()
         
         # Icône et texte
-        icon_label = QLabel("📁")
+        icon_label = QLabel("+")
         icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setStyleSheet("font-size: 32px; margin-bottom: 10px;")
+        icon_label.setStyleSheet("font-size: 48px; font-weight: bold; color: #aaa; margin-bottom: 10px;")
         layout.addWidget(icon_label)
         
         text_label = QLabel("Glissez-déposez vos fichiers ici\nou cliquez pour sélectionner")
@@ -149,7 +149,7 @@ class FileListWidget(QListWidget):
         
         # Créer l'item avec icône selon le type de fichier
         item = QListWidgetItem()
-        item.setText(f"📄 {file_name} ({size_str})")
+        item.setText(f"{file_name} ({size_str})")
         item.setData(Qt.UserRole, file_path)
         
         # Ajouter un bouton de suppression
@@ -179,10 +179,10 @@ class AddDossierDialog(QDialog):
         self.files_to_upload = []  # Liste des fichiers à uploader
         
         if dossier_data:
-            self.setWindowTitle("✏️ Modifier le dossier")
+            self.setWindowTitle("Modifier le dossier")
             self.is_editing = True
         else:
-            self.setWindowTitle("📁 Ajouter un dossier")
+            self.setWindowTitle("Ajouter un dossier")
             self.is_editing = False
             
         self.setModal(True)
@@ -197,7 +197,7 @@ class AddDossierDialog(QDialog):
         layout = QVBoxLayout()
 
         # Titre
-        title_label = QLabel("📁 Nouveau dossier" if not self.is_editing else "✏️ Modifier le dossier")
+        title_label = QLabel("Nouveau dossier" if not self.is_editing else "Modifier le dossier")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("font-weight: bold; font-size: 16px; margin: 10px; color: #1976D2;")
         layout.addWidget(title_label)
@@ -231,19 +231,19 @@ class AddDossierDialog(QDialog):
         self.niveau_confidentialite_input = QComboBox()
         self.niveau_confidentialite_input.addItems(NIVEAUX_CONFIDENTIALITE)
 
-        content_layout.addWidget(QLabel("👤 Nom de la personne :"))
+        content_layout.addWidget(QLabel("Nom de la personne :"))
         content_layout.addWidget(self.nom_input)
-        content_layout.addWidget(QLabel("📊 État :"))
+        content_layout.addWidget(QLabel("État :"))
         content_layout.addWidget(self.etat_input)
-        content_layout.addWidget(QLabel("📍 Localisation :"))
+        content_layout.addWidget(QLabel("Localisation :"))
         content_layout.addWidget(self.localisation_input)
-        content_layout.addWidget(QLabel("📅 Date de création :"))
+        content_layout.addWidget(QLabel("Date de création :"))
         content_layout.addWidget(self.date_input)
-        content_layout.addWidget(QLabel("👨‍💼 Responsable :"))
+        content_layout.addWidget(QLabel("Responsable :"))
         content_layout.addWidget(self.responsable_input)
-        content_layout.addWidget(QLabel("🔒 Niveau de confidentialité :"))
+        content_layout.addWidget(QLabel("Niveau de confidentialité :"))
         content_layout.addWidget(self.niveau_confidentialite_input)
-        content_layout.addWidget(QLabel("💬 Commentaire :"))
+        content_layout.addWidget(QLabel("Commentaire :"))
         content_layout.addWidget(self.commentaire_input)
 
         # Séparateur
@@ -253,7 +253,7 @@ class AddDossierDialog(QDialog):
         content_layout.addWidget(separator)
 
         # Section Pièces jointes
-        pieces_label = QLabel("📎 Pièces jointes")
+        pieces_label = QLabel("Pièces jointes")
         pieces_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #1976D2; margin-top: 10px;")
         content_layout.addWidget(pieces_label)
 
@@ -263,7 +263,7 @@ class AddDossierDialog(QDialog):
         content_layout.addWidget(self.drop_widget)
 
         # Liste des fichiers sélectionnés
-        files_label = QLabel("📋 Fichiers sélectionnés :")
+        files_label = QLabel("Fichiers sélectionnés :")
         content_layout.addWidget(files_label)
         
         self.files_list = FileListWidget()
@@ -271,8 +271,8 @@ class AddDossierDialog(QDialog):
 
         # Boutons pour les fichiers
         files_btn_layout = QHBoxLayout()
-        self.btn_add_files = QPushButton("📁 Ajouter des fichiers")
-        self.btn_remove_files = QPushButton("🗑️ Supprimer la sélection")
+        self.btn_add_files = QPushButton("Ajouter des fichiers")
+        self.btn_remove_files = QPushButton("Supprimer la sélection")
         self.btn_add_files.setProperty("success", True)
         self.btn_remove_files.setProperty("warning", True)
         files_btn_layout.addWidget(self.btn_add_files)
@@ -285,7 +285,7 @@ class AddDossierDialog(QDialog):
         content_layout.addWidget(self.progress_bar)
 
         # Message d'aide
-        help_label = QLabel("💡 Formats acceptés : PDF, Word, Excel, Images, Textes. Taille max : 10 MB par fichier.")
+        help_label = QLabel("Formats acceptés : PDF, Word, Excel, Images, Textes. Taille max : 10 MB par fichier.")
         help_label.setStyleSheet("color: #6c757d; font-size: 11px; font-style: italic; margin: 5px;")
         help_label.setWordWrap(True)
         content_layout.addWidget(help_label)
@@ -296,10 +296,10 @@ class AddDossierDialog(QDialog):
         # Boutons principaux
         btn_layout = QHBoxLayout()
         if self.is_editing:
-            self.btn_ok = QPushButton("✅ Modifier")
+            self.btn_ok = QPushButton("Modifier")
         else:
-            self.btn_ok = QPushButton("✅ Ajouter")
-        self.btn_cancel = QPushButton("❌ Annuler")
+            self.btn_ok = QPushButton("Ajouter")
+        self.btn_cancel = QPushButton("Annuler")
         self.btn_ok.setProperty("success", True)
         self.btn_cancel.setProperty("warning", True)
         btn_layout.addWidget(self.btn_ok)

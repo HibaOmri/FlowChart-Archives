@@ -1,124 +1,111 @@
-import sqlite3
+import os
+import sys
 
-def create_tables():
-    conn = sqlite3.connect('archives.db')  # Le fichier sera créé dans le dossier courant
-    cursor = conn.cursor()
+# Ensure backend directory is in path if run from root
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-    # Table dossiers
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS dossiers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom_personne TEXT NOT NULL,
-        etat_personne TEXT NOT NULL,
-        localisation TEXT NOT NULL,
-        date_creation DATE NOT NULL,
-        commentaire TEXT,
-        responsable_id INTEGER,
-        niveau_confidentialite TEXT DEFAULT 'Interne',
-        FOREIGN KEY (responsable_id) REFERENCES utilisateurs(id)
-    )
-    """)
+from db import (
+    get_db, 
+    get_next_id,
+    ajouter_utilisateur, 
+    creer_compte_utilisateur,
+    ajouter_dossier
+)
 
-    # Table utilisateurs
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS utilisateurs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        nom TEXT NOT NULL,
-        fonction TEXT NOT NULL,
-        contact TEXT,
-        role TEXT NOT NULL DEFAULT 'Archiviste',
-        permissions TEXT,
-        is_active BOOLEAN DEFAULT 1
-    )
-    """)
-
-    # Table mouvements
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS mouvements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_dossier INTEGER NOT NULL,
-        id_utilisateur INTEGER NOT NULL,
-        type_mouvement TEXT NOT NULL,
-        date_mouvement DATETIME NOT NULL,
-        date_retour_prevue DATE,
-        destinataire_nom TEXT,
-        destinataire_fonction TEXT,
-        motif TEXT NOT NULL,
-        remarques TEXT,
-        signature_utilisateur TEXT,
-        date_retour_effective DATETIME,
-        FOREIGN KEY (id_dossier) REFERENCES dossiers(id),
-        FOREIGN KEY (id_utilisateur) REFERENCES utilisateurs(id)
-    )
-    """)
-
-    # Table comptes 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS comptes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        matricule TEXT UNIQUE NOT NULL,
-        id_utilisateur INTEGER NOT NULL,
-        FOREIGN KEY (id_utilisateur) REFERENCES utilisateurs(id)
-    )
-    """)
-
-    # Table pièces jointes
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS pieces_jointes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        id_dossier INTEGER NOT NULL,
-        nom_fichier TEXT NOT NULL,
-        chemin_fichier TEXT NOT NULL,
-        type_fichier TEXT,
-        taille_fichier INTEGER,
-        date_ajout DATETIME DEFAULT CURRENT_TIMESTAMP,
-        description TEXT,
-        FOREIGN KEY (id_dossier) REFERENCES dossiers(id)
-    )
-    """)
-
-    #  des données d'exemple pour faciliter les tests
+def init_db():
+    print("Initialisation de la base de données Neo4j...")
+    conn = get_db()
+    
+    # 1. Création des contraintes (Unicité)
     try:
-        # Utilisateurs d'exemple avec rôles
-        cursor.execute("""
-        INSERT OR IGNORE INTO utilisateurs (id, nom, fonction, contact, role, permissions) VALUES 
-        (1, 'Admin Principal', 'Administrateur', 'admin@entreprise.com', 'RH', '["read", "write", "manage_users"]'),
-        (2, 'Ahmed Hassan', 'Archiviste', 'ahmed.hassan@entreprise.com', 'Archiviste', '["read", "write", "delete"]')
-        """)
+        # Neo4j 5.x syntax for constraints
+        constraints = [
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Compte) REQUIRE c.username IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Compte) REQUIRE c.matricule IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (u:Utilisateur) REQUIRE u.id IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (d:Dossier) REQUIRE d.id IS UNIQUE",
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (p:PieceJointe) REQUIRE p.id IS UNIQUE",
+            # Counter constraint
+            "CREATE CONSTRAINT IF NOT EXISTS FOR (c:Counter) REQUIRE c.name IS UNIQUE"
+        ]
         
-        # Comptes d'exemple avec matricules
-        cursor.execute("""
-        INSERT OR IGNORE INTO comptes (username, matricule, id_utilisateur) VALUES 
-        ('admin', 'EMP001', 1),
-        ('ahmed.hassan', 'EMP002', 2)
-        """)
-        
-        # Dossiers d'exemple
-        cursor.execute("""
-        INSERT OR IGNORE INTO dossiers (nom_personne, etat_personne, localisation, date_creation, commentaire) VALUES 
-        ('Dossier Test 1', 'Actif', 'Rayon A - Étagère 1', '2024-01-15', 'Dossier de test pour démonstration'),
-        ('Dossier Test 2', 'Archivé', 'Archives - Boîte 5', '2024-01-10', 'Dossier archivé')
-        """)
-        
-    except sqlite3.IntegrityError:
-        # Les données existent déjà, pas de problème
-        pass
+        for const in constraints:
+            conn.query(const)
+        print("Contraintes vérifiées/créées.")
+    except Exception as e:
+        print(f"Erreur lors de la création des contraintes : {e}")
 
-    # Ajouter la colonne date_retour_effective si elle n'existe pas
-    try:
-        cursor.execute("ALTER TABLE mouvements ADD COLUMN date_retour_effective DATETIME")
-        print("Colonne date_retour_effective ajoutée à la table mouvements.")
-    except sqlite3.OperationalError:
-        # La colonne existe déjà
-        pass
+    # 2. Initialisation des compteurs (si inexistants)
+    labels = ['Dossier', 'Utilisateur', 'Compte', 'Mouvement', 'PieceJointe']
+    for label in labels:
+        try:
+            # On ne reset pas si existe, on s'assure juste qu'il existe
+            query = "MERGE (c:Counter {name: $name}) ON CREATE SET c.count = 0"
+            conn.query(query, {'name': label})
+        except Exception as e:
+            print(f"Erreur init compteur {label}: {e}")
+    print("Compteurs initialisés.")
 
-    conn.commit()
+    # 3. Données d'exemple
+    # On vérifie s'il y a des utilisateurs
+    users = conn.query("MATCH (u:Utilisateur) RETURN count(u)")
+    if users[0][0] == 0:
+        print("Base vide, ajout des données d'exemple...")
+        try:
+            # Admin RH
+            id_admin = ajouter_utilisateur(
+                nom="Admin Principal",
+                fonction="Administrateur",
+                contact="admin@entreprise.com",
+                role="RH"
+            )
+            # Donne des permissions (json string comme dans l'original) via une update manuelle ou via le code (code ne gère pas permissions en écriture explicite dans ajouter_utilisateur, on va faire un patch)
+            conn.query("MATCH (u:Utilisateur {id: $id}) SET u.permissions = $p", 
+                      {'id': id_admin, 'p': '["read", "write", "manage_users"]'})
+            
+            creer_compte_utilisateur(id_admin, "admin", "EMP001")
+            
+            # Archiviste
+            id_archiviste = ajouter_utilisateur(
+                nom="Ahmed Hassan",
+                fonction="Archiviste",
+                contact="ahmed.hassan@entreprise.com",
+                role="Archiviste"
+            )
+            conn.query("MATCH (u:Utilisateur {id: $id}) SET u.permissions = $p", 
+                      {'id': id_archiviste, 'p': '["read", "write", "delete"]'})
+            creer_compte_utilisateur(id_archiviste, "ahmed.hassan", "EMP002")
+            
+            # Dossiers
+            ajouter_dossier(
+                nom_personne='Dossier Test 1',
+                etat_personne='Actif',
+                localisation='Rayon A - Étagère 1',
+                date_creation='2024-01-15',
+                commentaire='Dossier de test pour démonstration',
+                responsable_id=id_archiviste,
+                niveau_confidentialite='Interne'
+            )
+            
+            ajouter_dossier(
+                nom_personne='Dossier Test 2',
+                etat_personne='Archivé',
+                localisation='Archives - Boîte 5',
+                date_creation='2024-01-10',
+                commentaire='Dossier archivé',
+                niveau_confidentialite='Interne'
+            )
+            
+            print("Données d'exemple ajoutées.")
+            print("- admin / EMP001 (RH)")
+            print("- ahmed.hassan / EMP002 (Archiviste)")
+            
+        except Exception as e:
+            print(f"Erreur lors de l'ajout des données d'exemple : {e}")
+    else:
+        print("La base contient déjà des données.")
+
     conn.close()
-    print("Base de données et tables créées avec succès.")
-    print("Comptes d'exemple créés :")
-    print("- admin / EMP001 (RH)")
-    print("- ahmed.hassan / EMP002 (Archiviste)")
 
 if __name__ == "__main__":
-    create_tables() 
+    init_db()

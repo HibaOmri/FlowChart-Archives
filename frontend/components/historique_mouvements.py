@@ -8,17 +8,18 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 import db
 
 class HistoriqueMouvementsDialog(QDialog):
-    def __init__(self, id_dossier, nom_dossier, parent=None):
+    def __init__(self, id_dossier, nom_dossier, parent=None, user_info=None):
         super().__init__(parent)
         self.id_dossier = id_dossier
-        self.setWindowTitle(f"📋 Historique des mouvements - {nom_dossier}")
+        self.user_info = user_info
+        self.setWindowTitle(f"Historique des mouvements - {nom_dossier}")
         self.setModal(True)
         self.resize(800, 500)
         self.setStyleSheet(STYLE_SHEET)
         layout = QVBoxLayout()
 
         # Titre
-        title_label = QLabel(f"📋 Historique des mouvements - {nom_dossier}")
+        title_label = QLabel(f"Historique des mouvements - {nom_dossier}")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("font-weight: bold; font-size: 16px; margin: 10px; color: #1976D2;")
         layout.addWidget(title_label)
@@ -27,7 +28,7 @@ class HistoriqueMouvementsDialog(QDialog):
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "📁 Dossier", "👤 Donné par", "👥 Donné à", "📅 Date", "📋 Motif", "📅 Retour prévu", "⚙️ Actions"
+            "Dossier", "Donné par", "Donné à", "Date", "Motif", "Retour prévu", "Actions"
         ])
         
         # Ajuster les colonnes
@@ -46,8 +47,8 @@ class HistoriqueMouvementsDialog(QDialog):
 
         # Boutons
         btn_layout = QHBoxLayout()
-        self.btn_add = QPushButton("➕ Ajouter un mouvement")
-        self.btn_close = QPushButton("❌ Fermer")
+        self.btn_add = QPushButton("Ajouter un mouvement")
+        self.btn_close = QPushButton("Fermer")
         self.btn_add.setProperty("success", True)
         btn_layout.addWidget(self.btn_add)
         btn_layout.addStretch()
@@ -68,77 +69,92 @@ class HistoriqueMouvementsDialog(QDialog):
         mouvements = db.historique_mouvements(self.id_dossier)
         self.table.setRowCount(len(mouvements))
         for row, mouvement in enumerate(mouvements):
-            # Structure des colonnes retournées par historique_mouvements :
-            # id, id_dossier, id_utilisateur, type_mouvement, date_mouvement, 
-            # date_retour_prevue, destinataire_nom, destinataire_fonction, motif, remarques, signature_utilisateur, nom_utilisateur
+            # 0: r.id, 1: id_dossier, 12: u.nom (Donné par), 6: Destinataire, 4: Date, 8: Motif, 5: Retour prévu
             
-            # Dossier (numéro du dossier - colonne 1)
-            numero_dossier = mouvement[1] if len(mouvement) > 1 else "N/A"
-            self.table.setItem(row, 0, QTableWidgetItem(str(numero_dossier)))
+            # Dossier
+            id_dossier = mouvement[1] if mouvement[1] is not None else "N/A"
+            self.table.setItem(row, 0, QTableWidgetItem(str(id_dossier)))
             
-            # Donné par (nom de l'utilisateur qui donne - dernière colonne)
-            donne_par = mouvement[11] if len(mouvement) > 11 else "N/A"
+            # Donné par
+            donne_par = mouvement[12] if len(mouvement) > 12 and mouvement[12] else "Inconnu"
             self.table.setItem(row, 1, QTableWidgetItem(str(donne_par)))
             
-            # Donné à (destinataire - colonne 6)
-            donne_a = mouvement[6] if len(mouvement) > 6 else "N/A"
+            # Donné à
+            donne_a = mouvement[6] if len(mouvement) > 6 and mouvement[6] else "N/A"
             self.table.setItem(row, 2, QTableWidgetItem(str(donne_a)))
             
-            # Date (colonne 4) - formater pour l'affichage
-            date_mouvement = mouvement[4] if len(mouvement) > 4 else "N/A"
-            if date_mouvement != "N/A":
-                try:
+            # Date Mouvement
+            date_full = mouvement[4] if len(mouvement) > 4 and mouvement[4] else ""
+            date_display = date_full
+            try:
+                if date_display:
                     from datetime import datetime
-                    dt = datetime.strptime(str(date_mouvement), '%Y-%m-%d %H:%M:%S')
-                    date_mouvement = dt.strftime('%d/%m/%Y')
-                except:
-                    pass
-            self.table.setItem(row, 3, QTableWidgetItem(str(date_mouvement)))
+                    if "T" in str(date_display):
+                         dt = datetime.fromisoformat(str(date_display))
+                    else:
+                         dt = datetime.strptime(str(date_display), '%Y-%m-%d %H:%M:%S')
+                    date_display = dt.strftime('%d/%m/%Y')
+            except:
+                pass
+            self.table.setItem(row, 3, QTableWidgetItem(str(date_display)))
             
-            # Motif (colonne 8)
-            motif = mouvement[8] if len(mouvement) > 8 else "N/A"
+            # Motif
+            motif = mouvement[8] if len(mouvement) > 8 and mouvement[8] else ""
             self.table.setItem(row, 4, QTableWidgetItem(str(motif)))
             
-            # Retour prévu (colonne 5)
-            date_retour_prevue = mouvement[5] if len(mouvement) > 5 else "N/A"
-            if date_retour_prevue != "N/A":
+            # Retour Prévu & Calcul Retard
+            date_ret_str = mouvement[5] if len(mouvement) > 5 and mouvement[5] else ""
+            date_ret_obj = None
+            date_ret_display = ""
+            
+            if date_ret_str:
                 try:
                     from datetime import datetime
-                    dt = datetime.strptime(str(date_retour_prevue), '%Y-%m-%d')
-                    date_retour_prevue = dt.strftime('%d/%m/%Y')
+                    dt = datetime.strptime(str(date_ret_str), '%Y-%m-%d')
+                    date_ret_obj = dt.date()
+                    date_ret_display = dt.strftime('%d/%m/%Y')
                 except:
-                    pass
-            self.table.setItem(row, 5, QTableWidgetItem(str(date_retour_prevue)))
+                    date_ret_display = str(date_ret_str)
             
-            # Actions : Statut simple avec couleur de fond
-            id_mouvement = mouvement[0] if len(mouvement) > 0 else None
+            item_date_ret = QTableWidgetItem(date_ret_display)
+            self.table.setItem(row, 5, item_date_ret)
             
-            # Vérifier si le mouvement a été retourné
+            # Actions & Statut
+            id_mouvement = mouvement[0]
             est_retourne = db.verifier_mouvement_retourne(id_mouvement) if id_mouvement else False
             
+            # Check Retard
+            is_late = False
+            if not est_retourne and date_ret_obj:
+                from datetime import datetime
+                if date_ret_obj < datetime.now().date():
+                    is_late = True
+
             if est_retourne:
-                # Si retourné, afficher "Retour" en vert
-                status_text = "Retour"
+                status_text = "Retourné"
                 status_color = "#4CAF50"  # Vert
+            elif is_late:
+                status_text = "RETARD"
+                status_color = "#D32F2F"  # Rouge Alerte
+                # Mettre en rouge la date de retour aussi
+                item_date_ret.setForeground(QColor("#D32F2F"))
+                f = item_date_ret.font()
+                f.setBold(True)
+                item_date_ret.setFont(f)
             else:
-                # Si pas retourné, afficher "Prise" en bleu
-                status_text = "Prise"
+                status_text = "En Prise"
                 status_color = "#2196F3"  # Bleu
             
-            # Créer un item de tableau avec couleur de fond
             action_item = QTableWidgetItem(status_text)
             action_item.setBackground(QColor(status_color))
             action_item.setForeground(QColor("white"))
             action_item.setTextAlignment(Qt.AlignCenter)
-            
-            # Stocker l'ID du mouvement dans les données de l'item
             action_item.setData(Qt.UserRole, id_mouvement)
             action_item.setData(Qt.UserRole + 1, est_retourne)
             
             self.table.setItem(row, 6, action_item)
 
     def on_cell_clicked(self, row, column):
-        """Gère les clics sur les cellules du tableau."""
         if column == 6:  # Colonne Actions
             item = self.table.item(row, column)
             if item:
@@ -146,8 +162,7 @@ class HistoriqueMouvementsDialog(QDialog):
                 est_retourne = item.data(Qt.UserRole + 1)
                 
                 if not est_retourne:
-                    # Si pas retourné, proposer de marquer comme retourné
-                    reply = QMessageBox.question(self, "📤 Confirmation de retour", 
+                    reply = QMessageBox.question(self, "Confirmation de retour", 
                                                "Voulez-vous marquer ce dossier comme retourné ?\n\n"
                                                "Cette action enregistrera la date de retour effective.", 
                                                QMessageBox.Yes | QMessageBox.No)
@@ -155,50 +170,49 @@ class HistoriqueMouvementsDialog(QDialog):
                         try:
                             db.marquer_mouvement_retourne(id_mouvement)
                             self.charger_mouvements()
-                            QMessageBox.information(self, "✅ Succès", "Dossier marqué comme retourné avec succès !")
+                            QMessageBox.information(self, "Succès", "Dossier marqué comme retourné avec succès !")
                         except Exception as e:
-                            QMessageBox.warning(self, "❌ Erreur", f"Erreur lors du marquage du retour :\n{str(e)}")
+                            QMessageBox.warning(self, "Erreur", f"Erreur lors du marquage du retour :\n{str(e)}")
                 else:
-                    # Si déjà retourné, proposer de supprimer
                     reply = QMessageBox.question(self, "⚠️ Confirmation", 
                                                "Ce dossier est déjà retourné.\n\n"
-                                               "Voulez-vous supprimer ce mouvement ?\n\n"
-                                               "Cette action est irréversible !", 
+                                               "Voulez-vous supprimer ce mouvement ?\n", 
                                                QMessageBox.Yes | QMessageBox.No)
                     if reply == QMessageBox.Yes:
                         try:
                             db.supprimer_mouvement(id_mouvement)
                             self.charger_mouvements()
-                            QMessageBox.information(self, "✅ Succès", "Mouvement supprimé avec succès !")
+                            QMessageBox.information(self, "Succès", "Mouvement supprimé avec succès !")
                         except Exception as e:
-                            QMessageBox.warning(self, "❌ Erreur", f"Erreur lors de la suppression :\n{str(e)}")
+                            QMessageBox.warning(self, "Erreur", f"Erreur lors de la suppression :\n{str(e)}") 
 
     def ajouter_mouvement(self):
-        dialog = AjouterMouvementDialog(self.id_dossier, self)
+        dialog = AjouterMouvementDialog(self.id_dossier, self, user_info=self.user_info)
         if dialog.exec_() == QDialog.Accepted:
             self.charger_mouvements()
 
 
 
 class AjouterMouvementDialog(QDialog):
-    def __init__(self, id_dossier, parent=None):
+    def __init__(self, id_dossier, parent=None, user_info=None):
         super().__init__(parent)
         self.id_dossier = id_dossier
-        self.setWindowTitle("➕ Ajouter un mouvement")
+        self.user_info = user_info
+        self.setWindowTitle("Ajouter un mouvement")
         self.setModal(True)
         self.setStyleSheet(STYLE_SHEET)
         layout = QVBoxLayout()
 
         # Titre
-        title_label = QLabel("➕ Ajouter un nouveau mouvement")
+        title_label = QLabel("Ajouter un nouveau mouvement")
         title_label.setAlignment(Qt.AlignCenter)
         title_label.setStyleSheet("font-weight: bold; font-size: 16px; margin: 10px; color: #1976D2;")
         layout.addWidget(title_label)
 
 
 
-        # Destinataire (employé OCP ou Autre)
-        layout.addWidget(QLabel("👤 Destinataire du dossier :"))
+        # Destinataire (ex: employé OCP ou Autre)
+        layout.addWidget(QLabel("Destinataire du dossier :"))
         self.destinataire_input = QComboBox()
         self.destinataire_map = {}  # id_utilisateur -> (nom, fonction)
         self.charger_destinataires()
@@ -214,34 +228,34 @@ class AjouterMouvementDialog(QDialog):
         # Motif du mouvement
         self.motif_input = QLineEdit()
         self.motif_input.setPlaceholderText("Motif de la demande (ex: Audit interne, Consultation, etc.)")
-        layout.addWidget(QLabel("📋 Motif :"))
+        layout.addWidget(QLabel("Motif :"))
         layout.addWidget(self.motif_input)
 
         # Date de retour prévue
         self.date_retour_input = QDateEdit()
         self.date_retour_input.setCalendarPopup(True)
         self.date_retour_input.setDate(QDate.currentDate().addDays(7))  # Par défaut +7 jours
-        layout.addWidget(QLabel("📅 Date de retour prévue :"))
+        layout.addWidget(QLabel("Date de retour prévue :"))
         layout.addWidget(self.date_retour_input)
 
         # Date et heure du mouvement
         self.date_input = QDateTimeEdit()
         self.date_input.setDateTime(QDateTime.currentDateTime())
         self.date_input.setCalendarPopup(True)
-        layout.addWidget(QLabel("📅 Date et heure du mouvement :"))
+        layout.addWidget(QLabel("Date et heure du mouvement :"))
         layout.addWidget(self.date_input)
 
         # Remarques
         self.remarques_input = QTextEdit()
         self.remarques_input.setMaximumHeight(100)
         self.remarques_input.setPlaceholderText("Remarques supplémentaires...")
-        layout.addWidget(QLabel("💬 Remarques :"))
+        layout.addWidget(QLabel("Remarques :"))
         layout.addWidget(self.remarques_input)
 
         # Boutons
         btn_layout = QHBoxLayout()
-        self.btn_ok = QPushButton("✅ Ajouter")
-        self.btn_cancel = QPushButton("❌ Annuler")
+        self.btn_ok = QPushButton("Ajouter")
+        self.btn_cancel = QPushButton("Annuler")
         self.btn_ok.setProperty("success", True)
         self.btn_cancel.setProperty("warning", True)
         btn_layout.addWidget(self.btn_ok)
@@ -318,7 +332,7 @@ class AjouterMouvementDialog(QDialog):
             self.id_dossier,
             destinataire_id,
             self.motif_input.text().strip(),
-            self.date_input.dateTime().toString("yyyy-MM-dd hh:mm:ss"),
+            self.date_input.dateTime().toString("yyyy-MM-dd HH:mm:ss"),
             self.date_retour_input.date().toString("yyyy-MM-dd"),
             destinataire_nom,
             destinataire_fonction,
@@ -329,23 +343,22 @@ class AjouterMouvementDialog(QDialog):
         id_dossier, destinataire_id, motif, date_mouvement, date_retour_prevue, destinataire_nom, destinataire_fonction, remarques = self.get_data()
         
         if not motif:
-            QMessageBox.warning(self, "⚠️ Erreur", "Veuillez saisir le motif du mouvement.")
+            QMessageBox.warning(self, "Erreur", "Veuillez saisir le motif du mouvement.")
             return
         
         if destinataire_id == -1 and not destinataire_nom:
-            QMessageBox.warning(self, "⚠️ Erreur", "Veuillez saisir le nom et prénom du destinataire externe.")
+            QMessageBox.warning(self, "Erreur", "Veuillez saisir le nom et prénom du destinataire externe.")
             return
         
         # Pour l'instant, on utilise un id_utilisateur par défaut (l'utilisateur connecté)
-        # TODO: Récupérer l'id de l'utilisateur connecté
-        id_utilisateur = 1  # Temporaire
+        id_utilisateur = self.user_info.get('id', 1) if self.user_info else 1
         
         # Utiliser le motif comme type de mouvement (plus simple)
         type_mouvement = "Transfert"  # Par défaut
         
         try:
             db.ajouter_mouvement(id_dossier, id_utilisateur, type_mouvement, motif, date_mouvement, date_retour_prevue, destinataire_nom, destinataire_fonction, remarques)
-            QMessageBox.information(self, "✅ Succès", f"Mouvement ajouté avec succès !")
+            QMessageBox.information(self, "Succès", f"Mouvement ajouté avec succès !")
             self.accept()
         except Exception as e:
-            QMessageBox.warning(self, "❌ Erreur", f"Erreur lors de l'ajout du mouvement :\n{str(e)}") 
+            QMessageBox.warning(self, "Erreur", f"Erreur lors de l'ajout du mouvement :\n{str(e)}") 

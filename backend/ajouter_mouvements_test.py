@@ -101,13 +101,18 @@ def ajouter_mouvements_test():
                 # Remarques détaillées
                 remarques = f"{motif} - {localisation} - Dossier {nom_dossier}"
                 
+                # Date de retour prévue (7 jours après)
+                date_retour = date_mouvement + timedelta(days=7)
+                
                 try:
                     db.ajouter_mouvement(
-                        dossier_id, 
-                        utilisateur_id, 
-                        type_mouvement, 
-                        date_mouvement.strftime("%Y-%m-%d %H:%M:%S"),
-                        remarques
+                        id_dossier=dossier_id, 
+                        id_utilisateur=utilisateur_id, 
+                        type_mouvement=type_mouvement, 
+                        motif=motif,
+                        date_mouvement=date_mouvement.strftime("%Y-%m-%d %H:%M:%S"),
+                        date_retour_prevue=date_retour.strftime("%Y-%m-%d"),
+                        remarques=remarques
                     )
                     mouvements_ajoutes += 1
                     

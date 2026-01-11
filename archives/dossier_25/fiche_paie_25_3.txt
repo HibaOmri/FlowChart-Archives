@@ -1,0 +1,9 @@
+
+Document de test pour le dossier Rachid Mansouri
+ID Dossier: 25
+Date de création: 03/01/2026 22:40:46
+Type: Document texte
+Description: Fiche Paie
+
+Ce fichier a été généré automatiquement pour les tests du système d'archives OCP Khouribga.
+                
