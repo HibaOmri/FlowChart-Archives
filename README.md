@@ -99,6 +99,7 @@ Une fenêtre de connexion s'ouvrira. Utilisez les comptes par défaut :
 
 | Rôle | Utilisateur | Matricule |
 |------|-------------|-----------|
+comme un testeur : 'n'importe quel nom et n'importe quel mdp'
 | **RH (Admin)** | `admin` | `EMP001` |
 | **Archiviste** | `ahmed.hassan` | `EMP002` |
 
@@ -186,7 +187,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ## 👥 Auteurs
 
-- **Votre nom** - *Développement initial* - [Votre GitHub]
+- Hiba Omri - *Développement initial* - [HibaOmri]
 
 ## 🙏 Remerciements
 
